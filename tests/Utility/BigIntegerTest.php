@@ -13,260 +13,280 @@ use PHPUnit\Framework\TestCase;
 
 abstract class BigIntegerTest extends TestCase
 {
-	/**
-	 * Whether the current testing instance supports this implementation.
-	 * @return bool
-	 */
-	abstract protected function _isSupported();
+    /**
+     * Whether the current testing instance supports this implementation.
+     * @return bool
+     */
+    abstract protected function _isSupported();
 
-	/**
-	 * Return mode expected by BigInteger::setPrefer.
-	 * @return string
-	 */
-	abstract protected function _getMode();
+    /**
+     * Return mode expected by BigInteger::setPrefer.
+     * @return string
+     */
+    abstract protected function _getMode();
 
-	protected function setUp()
-	{
-		if (!$this->_isSupported()) {
-			$this->markTestSkipped(sprintf('Mode %s is not supported.', $this->_getMode()));
-			return;
-		}
+    protected function setUp()
+    {
+        if (!$this->_isSupported()) {
+            $this->markTestSkipped(sprintf('Mode %s is not supported.', $this->_getMode()));
+            return;
+        }
 
-		BigInteger::setPrefer($this->_getMode());
-	}
+        BigInteger::setPrefer($this->_getMode());
+    }
 
 
 
-	public function testCreateFromString()
-	{
-		$a = BigInteger::create('8888');
-		$this->assertSame('8888', (string)$a);
+    public function testCreateFromString()
+    {
+        $a = BigInteger::create('8888');
+        $this->assertSame('8888', (string)$a);
 
-		$a = BigInteger::create('0');
-		$this->assertSame('0', (string)$a);
+        $a = BigInteger::create('0');
+        $this->assertSame('0', (string)$a);
 
-		$a = BigInteger::create('-8888');
-		$this->assertSame('-8888', (string)$a);
+        $a = BigInteger::create('-8888');
+        $this->assertSame('-8888', (string)$a);
 
-		$a = BigInteger::create('18446744073709551616');
-		$this->assertSame('18446744073709551616', (string)$a);
-	}
+        $a = BigInteger::create('18446744073709551616');
+        $this->assertSame('18446744073709551616', (string)$a);
+    }
 
-	public function testCreateFromInteger()
-	{
-		$a = BigInteger::create(8888);
-		$this->assertSame('8888', (string)$a);
+    /**
+     * @expectedException \InvalidArgumentException
+     */
+    public function testCreateFromInvalidString()
+    {
+        BigInteger::create('0x1');
+    }
 
-		$a = BigInteger::create(0);
-		$this->assertSame('0', (string)$a);
+    public function testCreateFromInteger()
+    {
+        $a = BigInteger::create(8888);
+        $this->assertSame('8888', (string)$a);
 
-		$a = BigInteger::create(-8888);
-		$this->assertSame('-8888', (string)$a);
+        $a = BigInteger::create(0);
+        $this->assertSame('0', (string)$a);
 
-		$a = BigInteger::create(PHP_INT_MAX);
-		$this->assertSame((string)PHP_INT_MAX, (string)$a);
-	}
+        $a = BigInteger::create(-8888);
+        $this->assertSame('-8888', (string)$a);
 
-	public function testToInteger()
-	{
-		$a = BigInteger::create(8888);
-		$this->assertSame(8888, $a->toInteger());
+        $a = BigInteger::create(PHP_INT_MAX);
+        $this->assertSame((string)PHP_INT_MAX, (string)$a);
 
-		$a = BigInteger::create(0);
-		$this->assertSame(0, $a->toInteger());
+        $a = BigInteger::create(PHP_INT_MIN);
+        $this->assertSame((string)PHP_INT_MIN, (string)$a);
+    }
 
-		$a = BigInteger::create(-8888);
-		$this->assertSame(-8888, $a->toInteger());
+    public function testToInteger()
+    {
+        $a = BigInteger::create(8888);
+        $this->assertSame(8888, $a->toInteger());
 
-		$a = BigInteger::create(PHP_INT_MAX);
-		$this->assertSame(PHP_INT_MAX, $a->toInteger());
-	}
+        $a = BigInteger::create(0);
+        $this->assertSame(0, $a->toInteger());
 
-	public function testClone()
-	{
-		$a = BigInteger::create('18446744073709551616');
-		$b = clone $a;
+        $a = BigInteger::create(-8888);
+        $this->assertSame(-8888, $a->toInteger());
 
-		$this->assertEquals($a, $b);
-		$this->assertSame('18446744073709551616', (string)$a);
-		$this->assertSame('18446744073709551616', (string)$b);
-	}
+        $a = BigInteger::create(PHP_INT_MAX);
+        $this->assertSame(PHP_INT_MAX, $a->toInteger());
+    }
 
-	public function testIsNegative()
-	{
-		$a = BigInteger::create('1');
-		$this->assertFalse($a->isNegative());
+    /**
+     * @expectedException \OverflowException
+     */
+    public function testIntegerOverflow()
+    {
+        $a = BigInteger::create(PHP_INT_MAX);
+        $a->add(1)->toInteger();
+    }
 
-		$a = BigInteger::create('0');
-		$this->assertFalse($a->isNegative());
+    public function testClone()
+    {
+        $a = BigInteger::create('18446744073709551616');
+        $b = clone $a;
 
-		$a = BigInteger::create('-0');
-		$this->assertFalse($a->isNegative());
+        $this->assertEquals($a, $b);
+        $this->assertSame('18446744073709551616', (string)$a);
+        $this->assertSame('18446744073709551616', (string)$b);
+    }
 
-		$a = BigInteger::create('-1');
-		$this->assertTrue($a->isNegative());
-	}
+    public function testIsNegative()
+    {
+        $a = BigInteger::create('1');
+        $this->assertFalse($a->isNegative());
 
-	public function testCompare()
-	{
-		$a = BigInteger::create('-18446744073709551616');
-		$b = BigInteger::create('18446744073709551616');
-		$c = BigInteger::create('18446744073709551616');
-		$d = BigInteger::create('18446744073709551617');
+        $a = BigInteger::create('0');
+        $this->assertFalse($a->isNegative());
 
-		$this->assertTrue($a->compare($b) < 0);
-		$this->assertTrue($b->compare($a) > 0);
+        $a = BigInteger::create('-0');
+        $this->assertFalse($a->isNegative());
 
-		$this->assertSame(0, $b->compare($c));
-		$this->assertSame(0, $c->compare($b));
+        $a = BigInteger::create('-1');
+        $this->assertTrue($a->isNegative());
+    }
 
-		$this->assertTrue($d->compare($c) > 0);
-		$this->assertTrue($c->compare($d) < 0);
-	}
+    public function testCompare()
+    {
+        $a = BigInteger::create('-18446744073709551616');
+        $b = BigInteger::create('18446744073709551616');
+        $c = BigInteger::create('18446744073709551616');
+        $d = BigInteger::create('18446744073709551617');
 
-	public function testAdd()
-	{
-		$a = BigInteger::create('1234');
-		$b = BigInteger::create('5678');
+        $this->assertTrue($a->compare($b) < 0);
+        $this->assertTrue($b->compare($a) > 0);
 
-		// test in both directions, also ensures immutability of original
-		$c = $a->add($b);
-		$d = $b->add($a);
+        $this->assertSame(0, $b->compare($c));
+        $this->assertSame(0, $c->compare($b));
 
-		// test equity
-		$this->assertEquals($c, $d);
+        $this->assertTrue($d->compare($c) > 0);
+        $this->assertTrue($c->compare($d) < 0);
+    }
 
-		// test result
-		$this->assertSame('6912', (string)$c);
-		$this->assertSame('6912', (string)$d);
+    public function testAdd()
+    {
+        $a = BigInteger::create('1234');
+        $b = BigInteger::create('5678');
 
-		// with one negative number
-		$b = BigInteger::create('-5678');
+        // test in both directions, also ensures immutability of original
+        $c = $a->add($b);
+        $d = $b->add($a);
 
-		// test in both directions, also ensures immutability of original
-		$c = $a->add($b);
-		$d = $b->add($a);
+        // test equity
+        $this->assertEquals($c, $d);
 
-		// test equity
-		$this->assertEquals($c, $d);
+        // test result
+        $this->assertSame('6912', (string)$c);
+        $this->assertSame('6912', (string)$d);
 
-		// test result
-		$this->assertSame('-4444', (string)$c);
-		$this->assertSame('-4444', (string)$d);
+        // with one negative number
+        $b = BigInteger::create('-5678');
 
-		// with two negative numbers
-		$a = BigInteger::create('-1234');
+        // test in both directions, also ensures immutability of original
+        $c = $a->add($b);
+        $d = $b->add($a);
 
-		// test in both directions, also ensures immutability of original
-		$c = $a->add($b);
-		$d = $b->add($a);
+        // test equity
+        $this->assertEquals($c, $d);
 
-		// test equity
-		$this->assertEquals($c, $d);
+        // test result
+        $this->assertSame('-4444', (string)$c);
+        $this->assertSame('-4444', (string)$d);
 
-		// test result
-		$this->assertSame('-6912', (string)$c);
-		$this->assertSame('-6912', (string)$d);
+        // with two negative numbers
+        $a = BigInteger::create('-1234');
 
-		// large number
-		$a = BigInteger::create('18446744073709551615');
-		$this->assertSame('18446744073709551616', (string)$a->add(1));
-	}
+        // test in both directions, also ensures immutability of original
+        $c = $a->add($b);
+        $d = $b->add($a);
 
-	public function testSubtract()
-	{
-		$a = BigInteger::create('1234');
-		$b = BigInteger::create('5678');
+        // test equity
+        $this->assertEquals($c, $d);
 
-		// test in both directions, also ensures immutability of original
-		$this->assertSame('-4444', (string)$a->subtract($b));
-		$this->assertSame('4444', (string)$b->subtract($a));
+        // test result
+        $this->assertSame('-6912', (string)$c);
+        $this->assertSame('-6912', (string)$d);
 
-		// with one negative number
-		$b = BigInteger::create('-5678');
+        // large number
+        $a = BigInteger::create('18446744073709551615');
+        $this->assertSame('18446744073709551616', (string)$a->add(1));
+    }
 
-		// test in both directions, also ensures immutability of original
-		$this->assertSame('6912', (string)$a->subtract($b));
-		$this->assertSame('-6912', (string)$b->subtract($a));
+    public function testSubtract()
+    {
+        $a = BigInteger::create('1234');
+        $b = BigInteger::create('5678');
 
-		// with two negative numbers
-		$a = BigInteger::create('-1234');
+        // test in both directions, also ensures immutability of original
+        $this->assertSame('-4444', (string)$a->subtract($b));
+        $this->assertSame('4444', (string)$b->subtract($a));
 
-		// test in both directions, also ensures immutability of original
-		$this->assertSame('4444', (string)$a->subtract($b));
-		$this->assertSame('-4444', (string)$b->subtract($a));
+        // with one negative number
+        $b = BigInteger::create('-5678');
 
-		// large number
-		$a = BigInteger::create('18446744073709551616');
-		$this->assertSame('18446744073709551615', (string)$a->subtract(1));
-	}
+        // test in both directions, also ensures immutability of original
+        $this->assertSame('6912', (string)$a->subtract($b));
+        $this->assertSame('-6912', (string)$b->subtract($a));
 
-	public function testMultiply()
-	{
-		$a = BigInteger::create('4294967296'); // 2^32
-		$b = BigInteger::create('18446744073709551616'); // 2^64
+        // with two negative numbers
+        $a = BigInteger::create('-1234');
 
-		$c = $a->multiply($b);
-		$d = $b->multiply($a);
+        // test in both directions, also ensures immutability of original
+        $this->assertSame('4444', (string)$a->subtract($b));
+        $this->assertSame('-4444', (string)$b->subtract($a));
 
-		// equity
-		$this->assertEquals($c, $d);
+        // large number
+        $a = BigInteger::create('18446744073709551616');
+        $this->assertSame('18446744073709551615', (string)$a->subtract(1));
+    }
 
-		// 2^96
-		$this->assertSame('79228162514264337593543950336', (string)$c);
-		$this->assertSame('79228162514264337593543950336', (string)$d);
-	}
+    public function testMultiply()
+    {
+        $a = BigInteger::create('4294967296'); // 2^32
+        $b = BigInteger::create('18446744073709551616'); // 2^64
 
-	public function testModulus()
-	{
-		$a = BigInteger::create('18446744073709551617'); // 2^64 + 1
-		$b = BigInteger::create('4294967296'); // 2^32
-		$this->assertSame('1', (string)$a->modulus($b));{
+        $c = $a->multiply($b);
+        $d = $b->multiply($a);
 
-	}
-		$a = BigInteger::create('-18446744073709551615'); // 2^64 + 1
-		$b = BigInteger::create('4294967296'); // 2^32
-		$this->assertSame('1', (string)$a->modulus($b));
-	}
+        // equity
+        $this->assertEquals($c, $d);
 
-	public function testToPower()
-	{
-		// 2^96
-		$a = BigInteger::create(2);
-		$this->assertSame('79228162514264337593543950336', (string)$a->toPower(96));
+        // 2^96
+        $this->assertSame('79228162514264337593543950336', (string)$c);
+        $this->assertSame('79228162514264337593543950336', (string)$d);
+    }
 
-		// (2^64)^2 = 2^128
-		$a = BigInteger::create('18446744073709551616');
-		$this->assertSame('340282366920938463463374607431768211456', (string)$a->toPower(2));
-	}
+    public function testModulus()
+    {
+        $a = BigInteger::create('18446744073709551617'); // 2^64 + 1
+        $b = BigInteger::create('4294967296'); // 2^32
+        $this->assertSame('1', (string)$a->modulus($b));{
 
-	public function testShiftRight()
-	{
-		// 2^64
-		$a = BigInteger::create('18446744073709551616');
-		$this->assertSame('4294967296', (string)$a->shiftRight(32));
-		$this->assertSame('1', (string)$a->shiftRight(64));
-	}
+    }
+        $a = BigInteger::create('-18446744073709551615'); // 2^64 + 1
+        $b = BigInteger::create('4294967296'); // 2^32
+        $this->assertSame('1', (string)$a->modulus($b));
+    }
 
-	public function testShiftLeft()
-	{
-		$a = BigInteger::create('1');
-		$this->assertSame('4294967296', (string)$a->shiftLeft(32));
-		$this->assertSame('18446744073709551616', (string)$a->shiftLeft(64));
+    public function testToPower()
+    {
+        // 2^96
+        $a = BigInteger::create(2);
+        $this->assertSame('79228162514264337593543950336', (string)$a->toPower(96));
 
-	}
+        // (2^64)^2 = 2^128
+        $a = BigInteger::create('18446744073709551616');
+        $this->assertSame('340282366920938463463374607431768211456', (string)$a->toPower(2));
+    }
 
-	public function testAbsoluteValue()
-	{
-		$a = BigInteger::create('18446744073709551616');
-		$this->assertSame('18446744073709551616', (string)$a->absoluteValue());
+    public function testShiftRight()
+    {
+        // 2^64
+        $a = BigInteger::create('18446744073709551616');
+        $this->assertSame('4294967296', (string)$a->shiftRight(32));
+        $this->assertSame('1', (string)$a->shiftRight(64));
+    }
 
-		$a = BigInteger::create('-18446744073709551616');
-		$this->assertSame('18446744073709551616', (string)$a->absoluteValue());
-	}
+    public function testShiftLeft()
+    {
+        $a = BigInteger::create('1');
+        $this->assertSame('4294967296', (string)$a->shiftLeft(32));
+        $this->assertSame('18446744073709551616', (string)$a->shiftLeft(64));
 
-	protected function tearDown()
-	{
-		BigInteger::setPrefer(null);
-	}
+    }
+
+    public function testAbsoluteValue()
+    {
+        $a = BigInteger::create('18446744073709551616');
+        $this->assertSame('18446744073709551616', (string)$a->absoluteValue());
+
+        $a = BigInteger::create('-18446744073709551616');
+        $this->assertSame('18446744073709551616', (string)$a->absoluteValue());
+    }
+
+    protected function tearDown()
+    {
+        BigInteger::setPrefer(null);
+    }
 }

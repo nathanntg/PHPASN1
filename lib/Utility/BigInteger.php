@@ -20,159 +20,178 @@ namespace FG\Utility;
  */
 abstract class BigInteger
 {
-	/**
-	 * Force a preference on the underlying big number implementation, useful for testing.
-	 * @var string|null
-	 */
-	private static $_prefer;
+    /**
+     * Force a preference on the underlying big number implementation, useful for testing.
+     * @var string|null
+     */
+    private static $_prefer;
 
-	public static function setPrefer($prefer = null)
-	{
-		self::$_prefer = $prefer;
-	}
+    public static function setPrefer($prefer = null)
+    {
+        self::$_prefer = $prefer;
+    }
 
-	/**
-	 * Create a BigInteger instance based off the base 10 string.
-	 * @param $str
-	 * @return self
-	 */
-	public static function create($str)
-	{
-		if (self::$_prefer) {
-			switch (self::$_prefer) {
-				case 'gmp':
-					$ret = new BigIntegerGmp();
-					break;
-				case 'bcmath':
-					$ret = new BigIntegerBcmath();
-					break;
-				default:
-					throw new \UnexpectedValueException('Unknown number implementation: ' . self::$_prefer);
-			}
-		}
-		else {
-			// autodetect
-			if (extension_loaded('gmp')) {
-				$ret = new BigIntegerGmp();
-			}
-			elseif (extension_loaded('bcmath')) {
-				$ret = new BigIntegerBcmath();
-			}
-			else {
-				// TODO: potentially offer pure php implementation?
-				throw new \RuntimeException('Requires GMP or bcmath extension.');
-			}
-		}
-		$ret->_fromString($str);
-		return $ret;
-	}
+    /**
+     * Create a BigInteger instance based off the base 10 string or an integer.
+     * @param string|int $val
+     * @return BigInteger
+     * @throws \InvalidArgumentException
+     */
+    public static function create($val)
+    {
+        if (self::$_prefer) {
+            switch (self::$_prefer) {
+                case 'gmp':
+                    $ret = new BigIntegerGmp();
+                    break;
+                case 'bcmath':
+                    $ret = new BigIntegerBcmath();
+                    break;
+                default:
+                    throw new \UnexpectedValueException('Unknown number implementation: ' . self::$_prefer);
+            }
+        }
+        else {
+            // autodetect
+            if (extension_loaded('gmp')) {
+                $ret = new BigIntegerGmp();
+            }
+            elseif (extension_loaded('bcmath')) {
+                $ret = new BigIntegerBcmath();
+            }
+            else {
+                // TODO: potentially offer pure php implementation?
+                throw new \RuntimeException('Requires GMP or bcmath extension.');
+            }
+        }
 
-	/**
-	 * BigInteger constructor.
-	 * Prevent directly instantiating object, use BigInteger::create instead.
-	 */
-	protected function __construct()
-	{
+        if (is_int($val)) {
+            $ret->_fromInteger($val);
+        }
+        else {
+            // convert to string, if not already one
+            $val = (string)$val;
 
-	}
+            // validate string
+            if (!preg_match('/^-?[0-9]+$/', $val)) {
+                throw new \InvalidArgumentException('Expects a string representation of an integer.');
+            }
+            $ret->_fromString($val);
+        }
 
-	/**
-	 * Subclasses must provide clone functionality.
-	 * @return self
-	 */
-	abstract public function __clone();
+        return $ret;
+    }
 
-	/**
-	 * Assign the instance value from base 10 string.
-	 * @param string $str
-	 */
-	abstract protected function _fromString($str);
+    /**
+     * BigInteger constructor.
+     * Prevent directly instantiating object, use BigInteger::create instead.
+     */
+    protected function __construct()
+    {
 
-	/**
-	 * Must provide string implementation that returns base 10 number.
-	 * @return string
-	 */
-	abstract public function __toString();
+    }
 
-	/* INFORMATIONAL FUNCTIONS */
+    /**
+     * Subclasses must provide clone functionality.
+     * @return BigInteger
+     */
+    abstract public function __clone();
 
-	/**
-	 * Return integer, if possible. Result is not defined if the number can not be represented in native integer.
-	 * @return int
-	 */
-	abstract public function toInteger();
+    /**
+     * Assign the instance value from base 10 string.
+     * @param string $str
+     */
+    abstract protected function _fromString($str);
 
-	/**
-	 * Is represented integer negative?
-	 * @return bool
-	 */
-	public function isNegative()
-	{
-		return $this->compare(0) === -1;
-	}
+    /**
+     * Assign the instance value from an integer type.
+     * @param int $integer
+     */
+    abstract protected function _fromInteger($integer);
 
-	/**
-	 * Compare the integer with $number, returns a negative integer if $this is less than number, returns 0 if $this is
-	 * equal to number and returns a positive integer if $this is greater than number.
-	 * @param self|string|int $number
-	 * @return int
-	 */
-	abstract public function compare($number);
+    /**
+     * Must provide string implementation that returns base 10 number.
+     * @return string
+     */
+    abstract public function __toString();
 
-	/* MODIFY */
+    /* INFORMATIONAL FUNCTIONS */
 
-	/**
-	 * Add another integer $b and returns the result.
-	 * @param self|string|int $b
-	 * @return self
-	 */
-	abstract public function add($b);
+    /**
+     * Return integer, if possible. Throws an exception if the number can not be represented as a native integer.
+     * @return int
+     * @throws \OverflowException
+     */
+    abstract public function toInteger();
 
-	/**
-	 * Subtract $b from $this and returns the result.
-	 * @param self|string|int $b
-	 * @return self
-	 */
-	abstract public function subtract($b);
+    /**
+     * Is represented integer negative?
+     * @return bool
+     */
+    abstract public function isNegative();
 
-	/**
-	 * Multiply value.
-	 * @param self|string|int $b
-	 * @return self
-	 */
-	abstract public function multiply($b);
+    /**
+     * Compare the integer with $number, returns a negative integer if $this is less than number, returns 0 if $this is
+     * equal to number and returns a positive integer if $this is greater than number.
+     * @param BigInteger|string|int $number
+     * @return int
+     */
+    abstract public function compare($number);
 
-	/**
-	 * The value $this modulus $b.
-	 * @param self|string|int $b
-	 * @return self
-	 */
-	abstract public function modulus($b);
+    /* MODIFY */
 
-	/**
-	 * Raise $this to the power of $b and returns the result.
-	 * @param self|string|int $b
-	 * @return self
-	 */
-	abstract public function toPower($b);
+    /**
+     * Add another integer $b and returns the result.
+     * @param BigInteger|string|int $b
+     * @return BigInteger
+     */
+    abstract public function add($b);
 
-	/**
-	 * Shift the value to the right by a set number of bits and returns the result.
-	 * @param int $bits
-	 * @return self
-	 */
-	abstract public function shiftRight($bits = 8);
+    /**
+     * Subtract $b from $this and returns the result.
+     * @param BigInteger|string|int $b
+     * @return BigInteger
+     */
+    abstract public function subtract($b);
 
-	/**
-	 * Shift the value to the left by a set number of bits and returns the result.
-	 * @param int $bits
-	 * @return self
-	 */
-	abstract public function shiftLeft($bits = 8);
+    /**
+     * Multiply value.
+     * @param BigInteger|string|int $b
+     * @return BigInteger
+     */
+    abstract public function multiply($b);
 
-	/**
-	 * Returns the absolute value.
-	 * @return self
-	 */
-	abstract public function absoluteValue();
+    /**
+     * The value $this modulus $b.
+     * @param BigInteger|string|int $b
+     * @return BigInteger
+     */
+    abstract public function modulus($b);
+
+    /**
+     * Raise $this to the power of $b and returns the result.
+     * @param BigInteger|string|int $b
+     * @return BigInteger
+     */
+    abstract public function toPower($b);
+
+    /**
+     * Shift the value to the right by a set number of bits and returns the result.
+     * @param int $bits
+     * @return BigInteger
+     */
+    abstract public function shiftRight($bits = 8);
+
+    /**
+     * Shift the value to the left by a set number of bits and returns the result.
+     * @param int $bits
+     * @return BigInteger
+     */
+    abstract public function shiftLeft($bits = 8);
+
+    /**
+     * Returns the absolute value.
+     * @return BigInteger
+     */
+    abstract public function absoluteValue();
 }
