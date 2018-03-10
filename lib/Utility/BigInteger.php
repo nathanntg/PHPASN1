@@ -46,6 +46,9 @@ abstract class BigInteger
 				case 'bcmath':
 					$ret = new BigIntegerBcmath();
 					break;
+				case 'php':
+					$ret = new BigIntegerPhp();
+					break;
 				default:
 					throw new \UnexpectedValueException('Unknown number implementation: ' . self::$_prefer);
 			}
@@ -59,8 +62,7 @@ abstract class BigInteger
 				$ret = new BigIntegerBcmath();
 			}
 			else {
-				// TODO: potentially offer pure php implementation?
-				throw new \RuntimeException('Requires GMP or bcmath extension.');
+				$ret = new BigIntegerPhp();
 			}
 		}
 		$ret->_fromString($str);
