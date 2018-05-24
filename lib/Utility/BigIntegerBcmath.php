@@ -40,7 +40,7 @@ class BigIntegerBcmath extends BigInteger
 
     public function toInteger()
     {
-        if ($this->compare(PHP_INT_MAX) > 0 || $this->compare(PHP_INT_MIN) < 0) {
+        if ($this->compare(PHP_INT_MAX) > 0 || $this->compare(defined('PHP_INT_MIN') ? PHP_INT_MIN : ~PHP_INT_MAX) < 0) {
             throw new \OverflowException(sprintf('Can not represent %s as integer.', $this->_str));
         }
         return (int)$this->_str;
